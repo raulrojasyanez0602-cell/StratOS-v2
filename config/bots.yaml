@@ -1,0 +1,42 @@
+# ============================================================================
+# stratOS — Configuracion de bots validados
+# ============================================================================
+
+webhook:
+  cap_global: 3
+  cap_por_simbolo: 1
+  nocional_pct: 0.30
+
+bots:
+  - id: Bot_BB_SOL_1H
+    symbol: SOLUSDT
+    timeframe: 1h
+    strategy: BOLLINGER_REVERSION
+    enabled: true
+    bb_length: 20
+    bb_std: 2.5
+    rsi_length: 14
+    rsi_max: 30
+    adx_length: 14
+    adx_max: 20
+    atr_length: 14
+    sl_atr_mult: 1.5
+    time_stop_bars: 48
+    tp_target: BB_MIDDLE
+    atr_pct_lookback: 720
+    atr_pct_min_rank: 0.70
+
+  - id: Bot_Donchian_ETH_4H
+    symbol: ETHUSDT
+    timeframe: 4h
+    strategy: DONCHIAN_BREAKOUT
+    enabled: true
+    donchian_length: 20
+    volume_zscore_min: 1.5
+    volume_lookback: 20
+    adx_length: 14
+    adx_min: 25
+    atr_length: 14
+    sl_atr_mult: 1.5
+    trail_atr_mult: 3.0
+    trail_lookback: 10
