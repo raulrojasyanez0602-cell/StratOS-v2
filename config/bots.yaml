@@ -1,13 +1,22 @@
 # ============================================================================
 # stratOS — Configuracion de bots validados
+# Version: v2 (motor nuevo, octubre 2026)
 # ============================================================================
 
+# --- Reglas del ensamble ---
 webhook:
-  cap_global: 3
-  cap_por_simbolo: 1
-  nocional_pct: 0.30
+  cap_global: 4           # 4 bots en paralelo
+  cap_por_simbolo: 1      # maximo 1 posicion por par subyacente
+  nocional_pct: 0.30      # 30% del balance por trade
 
+# --- Bots validados ---
 bots:
+
+  # ---------------------------------------------------------------------------
+  # Bot 1 — Bollinger Reversion SOL 1H
+  # Edge validado: PF 2.01, Sharpe 0.60, WFE 13.50
+  # Muestra: 12 trades / 3 anios
+  # ---------------------------------------------------------------------------
   - id: Bot_BB_SOL_1H
     symbol: SOLUSDT
     timeframe: 1h
@@ -26,6 +35,11 @@ bots:
     atr_pct_lookback: 720
     atr_pct_min_rank: 0.70
 
+  # ---------------------------------------------------------------------------
+  # Bot 2 — Donchian Breakout ETH 4H
+  # Edge validado: PF 1.69, Sharpe 0.62, WFE 1.81
+  # Muestra: 42 trades / 3 anios
+  # ---------------------------------------------------------------------------
   - id: Bot_Donchian_ETH_4H
     symbol: ETHUSDT
     timeframe: 4h
@@ -40,3 +54,51 @@ bots:
     sl_atr_mult: 1.5
     trail_atr_mult: 3.0
     trail_lookback: 10
+
+  # ---------------------------------------------------------------------------
+  # Bot 3 — Bollinger Reversion AVAX 1H (EN EVALUACION)
+  # Edge preliminar: PF 8.06, Sharpe 1.12, WFE 1.46
+  # Muestra: 8 trades / 3 anios — TOMAR CON RESERVA
+  # Validacion en vivo durante 3 meses
+  # ---------------------------------------------------------------------------
+  - id: Bot_BB_AVAX_1H
+    symbol: AVAXUSDT
+    timeframe: 1h
+    strategy: BOLLINGER_REVERSION
+    enabled: true
+    bb_length: 20
+    bb_std: 2.5
+    rsi_length: 14
+    rsi_max: 30
+    adx_length: 14
+    adx_max: 20
+    atr_length: 14
+    sl_atr_mult: 1.5
+    time_stop_bars: 48
+    tp_target: BB_MIDDLE
+    atr_pct_lookback: 720
+    atr_pct_min_rank: 0.70
+
+  # ---------------------------------------------------------------------------
+  # Bot 4 — Bollinger Reversion LINK 1H (EN EVALUACION)
+  # Edge preliminar: PF 2.54, Sharpe 0.58, WFE 2.31
+  # Muestra: 8 trades / 3 anios — TOMAR CON RESERVA
+  # Validacion en vivo durante 3 meses
+  # ---------------------------------------------------------------------------
+  - id: Bot_BB_LINK_1H
+    symbol: LINKUSDT
+    timeframe: 1h
+    strategy: BOLLINGER_REVERSION
+    enabled: true
+    bb_length: 20
+    bb_std: 2.5
+    rsi_length: 14
+    rsi_max: 30
+    adx_length: 14
+    adx_max: 20
+    atr_length: 14
+    sl_atr_mult: 1.5
+    time_stop_bars: 48
+    tp_target: BB_MIDDLE
+    atr_pct_lookback: 720
+    atr_pct_min_rank: 0.70
