@@ -52,8 +52,7 @@ bots:
     adx_min: 25
     atr_length: 14
     sl_atr_mult: 1.5
-    trail_atr_mult: 3.0
-    trail_lookback: 10
+    tp_atr_mult: 3.0
 
   # ---------------------------------------------------------------------------
   # Bot 3 — Bollinger Reversion AVAX 1H (EN EVALUACION)

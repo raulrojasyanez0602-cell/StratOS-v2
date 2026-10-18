@@ -166,10 +166,8 @@ def calcular_tp_sl(bot: dict, df: pd.DataFrame, precio_entrada: float):
         return tp, sl
 
     elif estrategia == "DONCHIAN_BREAKOUT":
-        # SL: entry - ATR * mult | TP: trailing (se maneja por separado)
-        # Devolvemos None en TP porque el Donchian usa trailing stop
+        # SL: entry - ATR * sl_mult | TP: entry + ATR * tp_mult
         sl = precio_entrada - atr_val * bot["sl_atr_mult"]
-        return None, sl
-
-    else:
-        raise ValueError(f"Estrategia no soportada: {estrategia}")
+        tp = precio_entrada + atr_val * bot["tp_atr_mult"]
+        return tp, sl
+    
