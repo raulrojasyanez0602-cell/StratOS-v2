@@ -10,7 +10,7 @@ import time
 import requests
 from typing import Optional
 
-WEBHOOK_URL = os.getenv("APPS_SCRIPT_WEBHOOK_URL")
+WEBHOOK_URL = os.getenv  ("https://stratos-web.onrender.com/api")
 WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN")
 
 # Comision roundtrip (0.18%) que Apps Script usara para el calculo de PnL
