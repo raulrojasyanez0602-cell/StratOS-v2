@@ -1,13 +1,3 @@
-# ============================================================================
-# main.py — Orquestador del motor stratOS
-# Ciclo completo:
-#   1. Cargar configuracion (bots.yaml + .env)
-#   2. Leer posiciones abiertas del Sheet
-#   3. Cerrar posiciones que tocaron TP/SL
-#   4. Evaluar nuevas senales por bot
-#   5. Aplicar caps (global + por simbolo)
-#   6. Enviar entradas al Sheet
-# ============================================================================
 import os
 import sys
 import yaml
@@ -23,8 +13,7 @@ from execution.webhook_sender import enviar_entrada, enviar_cierre
 # Cargar variables de entorno
 load_dotenv()
 
-APPS_URL = os.getenv("APPS_SCRIPT_WEBHOOK_URL")
-TOKEN = os.getenv("WEBHOOK_TOKEN")
+RENDER_API_URL = os.getenv("RENDER_API_URL","https://stratos-web.onrender.com")
 CAPITAL_INICIAL = float(os.getenv("CAPITAL_INICIAL", "650.0"))
 
 
@@ -42,12 +31,14 @@ def cargar_config(path: str = "config/bots.yaml") -> dict:
 
 
 def api_get(action: str, extra: str = "") -> dict:
-    """GET al endpoint doGet de Apps Script."""
-    if not APPS_URL:
-        return {"success": False, "error": "APPS_URL no configurada"}
-    url = f"{APPS_URL}?action={action}&token={TOKEN}{extra}"
+    """GET al endpoint de Render para obtener posiciones abiertas."""
+    if not RENDER_API_URL:
+        return {"success": False, "error": "RENDER_API_URL no configurada"}
+    
+    # Aquí está el gran cambio: Le pedimos los datos a Render
+    url = f"{RENDER_API_URL}/api/posiciones_abiertas"
     try:
-        r = requests.get(url, timeout=15, allow_redirects=True)
+        r = requests.get(url, timeout=15)
         if r.status_code == 200:
             return r.json()
     except Exception as e:
