@@ -1,100 +1,79 @@
-# ============================================================================
-# webhook_sender.py — Envío de señales a la API de Render (stratOS-Web)
-# ============================================================================
+import json
 import os
-import time
-import requests
-from typing import Optional
+import datetime
 
-# 1. Traemos la URL de Render (por defecto la de producción si no hay variable)
-# Asegúrate de no poner la barra '/' al final de la URL
-RENDER_API_URL = os.getenv("RENDER_API_URL", "https://stratos-web.onrender.com")
+JSON_FILE = "trades.json"
+CAPITAL_INICIAL = 650.0
+COMISION_PCT = 0.0018
 
-# Mantenemos la comisión por si el backend la necesita (aunque Python la calcula)
-COMISION_ROUNDTRIP = 0.0018
+def _leer_json():
+    if not os.path.exists(JSON_FILE):
+        return []
+    try:
+        with open(JSON_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return []
 
-def _post(url: str, payload: dict, descripcion: str, max_retries: int = 3) -> Optional[dict]:
-    """POST con retry exponencial a Render."""
-    if not RENDER_API_URL:
-        print(f"  [{descripcion}] ERROR: RENDER_API_URL no configurado en los Secrets")
-        return None
+def _guardar_json(trades):
+    with open(JSON_FILE, "w", encoding="utf-8") as f:
+        json.dump(trades, f, indent=4, ensure_ascii=False)
 
-    for intento in range(max_retries):
-        try:
-            r = requests.post(
-                url,
-                json=payload,
-                timeout=20,
-                # allow_redirects=True (Render no lo necesita, lo quitamos)
-            )
-
-            if r.status_code == 200:
-                try:
-                    data = r.json()
-                    print(f"  [{descripcion}] OK -> {data}")
-                    return data
-                except ValueError:
-                    print(f"  [{descripcion}] Respuesta no-JSON: {r.text[:200]}")
-                    return None
-
-            print(f"  [{descripcion}] HTTP {r.status_code} (intento {intento+1}): {r.text[:200]}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"  [{descripcion}] Error de red (intento {intento+1}): {e}")
-
-        if intento < max_retries - 1:
-            time.sleep(2 ** intento)  # 1s, 2s, 4s
-
-    return None
-
-
-def enviar_entrada(
-    bot_id: str,
-    symbol: str,
-    timeframe: str,
-    action: str,
-    precio: float,
-    tp_price: Optional[float],
-    sl_price: float,
-    bar_close_time: str,
-) -> Optional[dict]:
-    """
-    Envia una senal de ENTRADA al endpoint /api/entrada de Render.
-    """
-    # Apuntamos a la ruta exacta de entrada en FastAPI
-    url = f"{RENDER_API_URL}/api/entrada"
+def enviar_entrada(bot_id, symbol, timeframe, action, precio, tp_price, sl_price, bar_close_time):
+    trades = _leer_json()
     
-    # Mapeamos los datos exactamente como los espera EntradaPayload en main.py
-    payload = {
+    # 1. Calculamos el PnL acumulado y el balance actual
+    pnl_acum = sum(t.get("pnl_neto", 0.0) for t in trades if t.get("estado") == "CERRADO")
+    balance_actual = CAPITAL_INICIAL + pnl_acum
+    
+    # 2. Calculamos el nocional dinámico (30% del balance actual)
+    nocional = round(balance_actual * 0.30, 2)
+    
+    trade_id = f"{bot_id}-{int(datetime.datetime.now().timestamp())}"
+    
+    # 3. Guardamos TODOS los datos necesarios para calcular el PnL al cerrar
+    nuevo_trade = {
+        "id": trade_id,
         "bot_id": bot_id,
-        "action": action,
-        "symbol": symbol,
-        "price": precio,       # OJO: FastAPI espera 'price', no 'precio'
-        "tp_price": tp_price,
-        "sl_price": sl_price,
-        "timeframe": timeframe,
-        "bar_close_time": bar_close_time
+        "simbolo": symbol,
+        "accion": action,          # LONG o SHORT
+        "precio_entrada": precio,  # Vital para calcular la ganancia
+        "nocional": nocional,      # Tamaño de la posición
+        "pnl_neto": 0.0,
+        "estado": "ABIERTO",
+        "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    return _post(url, payload, f"ENTRADA {bot_id}")
+    trades.append(nuevo_trade)
+    _guardar_json(trades)
+    print(f"  [ENTRADA] Guardada en JSON: {trade_id} (Nocional: ${nocional})")
+    return nuevo_trade
 
-
-def enviar_cierre(
-    trade_id: str,
-    exit_price: float,
-    exec_type: str,
-) -> Optional[dict]:
-    """
-    Envia un CIERRE de posicion al endpoint /api/cierre de Render.
-    """
-    # Apuntamos a la ruta exacta de cierre en FastAPI
-    url = f"{RENDER_API_URL}/api/cierre"
+def enviar_cierre(trade_id, exit_price, exec_type):
+    trades = _leer_json()
     
-    # Mapeamos los datos exactamente como los espera CierrePayload en main.py
-    payload = {
-        "trade_id": trade_id,
-        "exit_price": exit_price,
-        "exec_type": exec_type,
-    }
-    
-    return _post(url, payload, f"CIERRE {trade_id}")
+    for t in trades:
+        if t["id"] == trade_id:
+            t["estado"] = "CERRADO"
+            
+            # 4. Extraemos los datos que guardamos en la entrada
+            precio_entrada = t.get("precio_entrada", exit_price)
+            nocional = t.get("nocional", 195.0) # 195.0 es un fallback por si acaso
+            accion = t.get("accion", "LONG")
+            
+            # 5. Matemática real del PnL
+            if precio_entrada > 0:
+                if accion == "LONG":
+                    pnl_bruto = nocional * (exit_price - precio_entrada) / precio_entrada
+                else: # SHORT
+                    pnl_bruto = nocional * (precio_entrada - exit_price) / precio_entrada
+                
+                comision = nocional * COMISION_PCT
+                t["pnl_neto"] = round(pnl_bruto - comision, 2)
+            else:
+                t["pnl_neto"] = 0.0
+                
+            print(f"  [CIERRE] Trade {trade_id} cerrado con PnL real: {t['pnl_neto']}")
+            break
+            
+    _guardar_json(trades)

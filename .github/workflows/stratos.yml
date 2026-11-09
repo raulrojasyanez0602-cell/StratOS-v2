@@ -23,9 +23,15 @@ jobs:
 
       - name: Run stratOS engine
         env:
-          APPS_SCRIPT_WEBHOOK_URL: ${{ secrets.APPS_SCRIPT_WEBHOOK_URL }}
-          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
           CAPITAL_INICIAL: "650.0"
           COMISION_PCT: "0.0018"
           NOCIONAL_PCT: "0.30"
         run: python main.py
+
+      - name: Guardar y subir trades al repositorio
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add trades.json || echo "No hay archivo trades.json"
+          git commit -m "🤖 Actualización automática de trades [skip ci]" || echo "No hay cambios nuevos"
+          git push
