@@ -5,6 +5,10 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch:
 
+# ESTO ES LO QUE SOLUCIONA EL ERROR DE PERMISOS (403)
+permissions:
+  contents: write
+
 jobs:
   run-engine:
     runs-on: ubuntu-latest
